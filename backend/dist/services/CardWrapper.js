@@ -2,12 +2,37 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CardWrapper = void 0;
 const KeyManager_1 = require("./KeyManager");
+const ethers_1 = require("ethers");
 class CardWrapper {
     constructor() {
+        this.CONTRACT_ADDRESS = process.env.NBACARD_ADDRESS || "";
+        this.RPC_URL = process.env.RPC_URL || "http://127.0.0.1:8545";
         // Initialize clients
         const keyManager = KeyManager_1.KeyManager.getInstance();
-        // In a real scenario, we'd initialize the clob client properly
-        // this.clobClient = new ClobClient(...)
+        // Initialize Blockchain Connection
+        this.provider = new ethers_1.ethers.JsonRpcProvider(this.RPC_URL);
+        const abi = [
+            "event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)",
+            "function uri(uint256 id) view returns (string)"
+        ];
+        if (this.CONTRACT_ADDRESS) {
+            this.contract = new ethers_1.ethers.Contract(this.CONTRACT_ADDRESS, abi, this.provider);
+            this.startListening();
+        }
+        else {
+            console.warn("NBACARD_ADDRESS not set, skipping contract connection");
+            // Mock contract to prevent crashes
+            this.contract = new ethers_1.ethers.Contract(ethers_1.ethers.ZeroAddress, abi, this.provider);
+        }
+    }
+    startListening() {
+        console.log(`Listening for events on ${this.CONTRACT_ADDRESS}`);
+        this.contract.on("TransferSingle", (operator, from, to, id, value, event) => {
+            if (from === ethers_1.ethers.ZeroAddress) {
+                console.log(`New Card Minted! ID: ${id}, Amount: ${value}, To: ${to}`);
+                // TODO: Index this card in DB
+            }
+        });
     }
     static getInstance() {
         if (!CardWrapper.instance) {
