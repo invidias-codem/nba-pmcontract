@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -64,5 +64,8 @@ contract NBACard is ERC1155, Ownable, ERC1155Holder {
             value /= 10;
         }
         return string(buffer);
+    }
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC1155Holder) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }

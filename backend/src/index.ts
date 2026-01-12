@@ -37,6 +37,9 @@ const wss = new WebSocket.Server({ server });
 const mirror = OrderBookMirror.getInstance();
 mirror.connect();
 
+import { CardWrapper } from './services/CardWrapper';
+const cardWrapper = CardWrapper.getInstance();
+
 wss.on('connection', (ws) => {
     console.log('New frontend client connected');
     mirror.addFrontendClient(ws);

@@ -1,5 +1,6 @@
 import { ClobClient } from '@polymarket/clob-client';
 import { KeyManager } from './KeyManager';
+import { ethers } from 'ethers';
 
 // Placeholder interfaces for external APIs
 interface ClearSportsStats {
@@ -37,6 +38,11 @@ export class CardWrapper {
     private static instance: CardWrapper;
     // @ts-ignore
     private clobClient: ClobClient; // Will act as ClobClient
+    private provider: ethers.JsonRpcProvider;
+    private contract: ethers.Contract;
+
+    private readonly CONTRACT_ADDRESS = process.env.NBACARD_ADDRESS || "";
+    private readonly RPC_URL = process.env.RPC_URL || "http://127.0.0.1:8545";
 
     // Mock clients for now, replaced by real implementations later
     private gammaClient: any;
@@ -45,8 +51,33 @@ export class CardWrapper {
     private constructor() {
         // Initialize clients
         const keyManager = KeyManager.getInstance();
-        // In a real scenario, we'd initialize the clob client properly
-        // this.clobClient = new ClobClient(...)
+
+        // Initialize Blockchain Connection
+        this.provider = new ethers.JsonRpcProvider(this.RPC_URL);
+
+        const abi = [
+            "event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)",
+            "function uri(uint256 id) view returns (string)"
+        ];
+
+        if (this.CONTRACT_ADDRESS) {
+            this.contract = new ethers.Contract(this.CONTRACT_ADDRESS, abi, this.provider);
+            this.startListening();
+        } else {
+            console.warn("NBACARD_ADDRESS not set, skipping contract connection");
+            // Mock contract to prevent crashes
+            this.contract = new ethers.Contract(ethers.ZeroAddress, abi, this.provider);
+        }
+    }
+
+    private startListening() {
+        console.log(`Listening for events on ${this.CONTRACT_ADDRESS}`);
+        this.contract.on("TransferSingle", (operator, from, to, id, value, event) => {
+            if (from === ethers.ZeroAddress) {
+                console.log(`New Card Minted! ID: ${id}, Amount: ${value}, To: ${to}`);
+                // TODO: Index this card in DB
+            }
+        });
     }
 
     public static getInstance(): CardWrapper {
